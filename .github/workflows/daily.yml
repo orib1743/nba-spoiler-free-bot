@@ -1,0 +1,84 @@
+# Free hosting on GitHub Actions: once a day the bot runs for a window (default
+# 70 minutes). It sends the morning message and answers Telegram messages,
+# including ones sent while it was off. See README "Free: one hour a day on
+# GitHub Actions".
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions):
+#   ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN       required
+#   NBA_AGENT_DATA_KEY                          required: any long random string; encrypts your saved data
+#   TELEGRAM_ALLOWED_USER_IDS                   optional: lock the bot to your Telegram user id
+#   NBA_AGENT_SEED_SETTINGS                     optional: settings JSON (python run.py export) for the first run
+name: daily bot window
+
+on:
+  schedule:
+    # Times are UTC. Pick a start a few minutes before your send time; GitHub may
+    # start scheduled runs 5-30 minutes late. 05:50 UTC = 07:50 in UTC+2.
+    - cron: "50 5 * * *"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "How long to keep the bot running (minutes)"
+        default: "70"
+
+concurrency:
+  group: bot          # never two copies at once (Telegram allows only one)
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      NBA_AGENT_DATA_DIR: ${{ github.workspace }}/data
+      NBA_AGENT_DATA_KEY: ${{ secrets.NBA_AGENT_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # Saved data (settings, agent id, conversation pointer) travels between runs
+      # in the Actions cache, encrypted, because caches of public repos can be
+      # read by workflows from other people's pull requests.
+      - name: Restore saved data
+        uses: actions/cache/restore@v4
+        with:
+          path: data.enc
+          key: nba-data-${{ github.run_id }}
+          restore-keys: nba-data-
+      - name: Decrypt saved data
+        id: decrypt
+        run: |
+          if [ -z "$NBA_AGENT_DATA_KEY" ]; then echo "::error::Set the NBA_AGENT_DATA_KEY repository secret"; exit 1; fi
+          mkdir -p data
+          if [ -f data.enc ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:NBA_AGENT_DATA_KEY -in data.enc | tar xz
+            echo "restored saved data"
+          else
+            echo "no saved data yet (first run)"
+          fi
+
+      - name: Run the bot
+        run: python run.py window "${{ inputs.minutes || '70' }}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ALLOWED_USER_IDS: ${{ secrets.TELEGRAM_ALLOWED_USER_IDS }}
+          NBA_AGENT_SEED_SETTINGS: ${{ secrets.NBA_AGENT_SEED_SETTINGS }}
+
+      - name: Encrypt saved data
+        if: always() && steps.decrypt.outcome == 'success'
+        run: |
+          files=$(cd . && ls data/nba_agent.db data/agent.json 2>/dev/null || true)
+          if [ -n "$files" ]; then
+            tar cz $files | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:NBA_AGENT_DATA_KEY -out data.enc
+          fi
+      - name: Save data for the next run
+        if: always() && steps.decrypt.outcome == 'success' && hashFiles('data.enc') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: data.enc
+          key: nba-data-${{ github.run_id }}

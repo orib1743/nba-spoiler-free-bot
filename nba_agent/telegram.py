@@ -155,6 +155,11 @@ def poll_forever(stop: threading.Event) -> None:
             _pool.submit(_safe_handle, u)
 
 
+def drain() -> None:
+    """Wait for replies still being written (used before the app exits)."""
+    _pool.shutdown(wait=True)
+
+
 def _safe_handle(update: dict) -> None:
     try:
         handle(update)

@@ -3,6 +3,7 @@
   python run.py web                      bots + daily scheduler + settings page on http://127.0.0.1:8000
   python run.py preview [YYYY-MM-DD]     print the morning message for a game night
   python run.py send                     build and send the morning message right now
+  python run.py window 70                run the bot for 70 minutes, then exit (daily GitHub Actions run)
   python run.py export > settings.json   save your settings to a file
   python run.py import settings.json     load settings from a file (e.g. on a new server)
 
@@ -35,6 +36,9 @@ def main() -> None:
         # or with NBA_AGENT_ADMIN_PASSWORD (see the guard in nba_agent/web.py).
         uvicorn.run("nba_agent.web:app", host=os.environ.get("HOST", "127.0.0.1"),
                     port=int(os.environ.get("PORT", "8000")))
+    elif cmd == "window":
+        from nba_agent import window
+        window.run(float(sys.argv[2]) if len(sys.argv) > 2 else 60)
     elif cmd == "export":
         from nba_agent import store
         print(store.get_settings().model_dump_json(indent=2))

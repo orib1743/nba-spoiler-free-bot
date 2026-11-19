@@ -18,27 +18,33 @@ RETRY_SECONDS = 600
 _next_try: dict[int, float] = {}
 
 
-def run_once(user_id: int, now: datetime | None = None) -> str | None:
-    """Send today's digest for one user if it's due. Returns a status string."""
+def run_once(user_id: int, now: datetime | None = None, send_by: datetime | None = None) -> str | None:
+    """Send today's digest for one user if it's due. Returns a status string.
+
+    `send_by` is a hard deadline (used when the app only runs for a short daily
+    window, e.g. on GitHub Actions): from then on the message goes out even if
+    the send time hasn't come yet or games are still being played."""
     now = now or datetime.now(timezone.utc)
     s = store.get_settings(user_id)
     if not s.enabled:
         return None
+    forced = send_by is not None and now >= send_by
     local = now.astimezone(ZoneInfo(s.timezone))
     h, m = map(int, s.send_time.split(":"))
     due_at = local.replace(hour=h, minute=m, second=0, microsecond=0)
-    if local < due_at:
+    if local < due_at and not forced:
         return None
     night = digest.game_night(now)
     if store.already_sent(user_id, night.isoformat()):
         return None
-    if time.time() < _next_try.get(user_id, 0):
+    if time.time() < _next_try.get(user_id, 0) and not forced:
         return None
 
     text, result = digest.build(night, store.as_dict(s))
     deadline = due_at + timedelta(hours=s.wait_for_final_hours)
-    if result["pending"] and local < deadline:
-        _next_try[user_id] = time.time() + RETRY_SECONDS
+    if result["pending"] and local < deadline and not forced:
+        retry = time.time() + RETRY_SECONDS
+        _next_try[user_id] = min(retry, send_by.timestamp()) if send_by else retry
         return f"waiting: {len(result['pending'])} game(s) still in progress"
 
     try:

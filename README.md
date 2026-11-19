@@ -104,11 +104,49 @@ The settings page is at http://127.0.0.1:8000.
 
 ---
 
+## Free: one hour a day on GitHub Actions
+
+If you only need the morning message plus a little chatting, GitHub can run
+the bot **for free** once a day (Actions minutes are free on public repos). The
+workflow `.github/workflows/daily.yml`:
+- starts the bot every morning and keeps it running for 70 minutes;
+- sends the morning message at your send time if it falls inside that window,
+  otherwise right away, and always before the window closes;
+- answers your Telegram messages, including ones sent while it was off
+  (Telegram keeps them for 24 hours). Replies to those come when the next
+  window opens;
+- keeps your settings between runs **encrypted** in the Actions cache.
+
+**Setup**
+1. Fork or push this repo to your GitHub account (keep it public for free minutes).
+2. In the repo, open **Settings → Secrets and variables → Actions → New repository
+   secret** and add:
+   - `ANTHROPIC_API_KEY`
+   - `TELEGRAM_BOT_TOKEN`
+   - `NBA_AGENT_DATA_KEY`: a long random password. It encrypts your saved data;
+     if you lose it, the bot starts fresh.
+   - Optional: `TELEGRAM_ALLOWED_USER_IDS` (your Telegram user id), and
+     `NBA_AGENT_SEED_SETTINGS` (the output of `python run.py export`) to start
+     with your current settings.
+3. Edit the `cron:` line in `daily.yml` to a few minutes before your send time,
+   **in UTC**. For example, 08:00 in UTC+2 is `50 5 * * *`.
+4. Go to **Actions → daily bot window → Run workflow** to try it right away. The
+   *minutes* box sets how long it stays up.
+
+**Good to know**
+- GitHub may start scheduled runs 5–30 minutes late.
+- GitHub pauses scheduled workflows in repos with no activity for 60 days;
+  re-enable them on the Actions tab.
+- Run only one copy of the bot at a time. Stop the one on your computer while
+  Actions is running it.
+- WhatsApp isn't supported in this mode, because it needs a public address all
+  the time.
+
 ## Run it 24/7 in the cloud
 
-The app is one always-on process: the Telegram bot, the morning scheduler and
-the settings page. It needs a host that keeps it running and has a **persistent
-disk** for `/data`, where your settings and conversation live.
+For instant replies at any hour, run it on an always-on host. The app is one
+process: the Telegram bot, the morning scheduler and the settings page. It
+needs a **persistent disk** for `/data`, where your settings and conversation live.
 
 ### Option A: Railway (easiest, about $5/month)
 1. Push this repo to your GitHub.
