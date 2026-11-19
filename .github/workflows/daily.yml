@@ -1,5 +1,5 @@
 # Free hosting on GitHub Actions: once a day the bot runs for a window (default
-# 70 minutes). It sends the morning message and answers Telegram messages,
+# 90 minutes). It sends the morning message and answers Telegram messages,
 # including ones sent while it was off. See README "Free: one hour a day on
 # GitHub Actions".
 #
@@ -12,14 +12,15 @@ name: daily bot window
 
 on:
   schedule:
-    # Times are UTC. Pick a start a few minutes before your send time; GitHub may
-    # start scheduled runs 5-30 minutes late. 05:50 UTC = 07:50 in UTC+2.
-    - cron: "50 5 * * *"
+    # Times are UTC. Start a while before your send time: GitHub may start
+    # scheduled runs 5-30 minutes late, and daylight saving shifts local time.
+    # 05:20 UTC + 90 min covers an 08:30 send in both UTC+2 (07:20-08:50) and UTC+3 (08:20-09:50).
+    - cron: "20 5 * * *"
   workflow_dispatch:
     inputs:
       minutes:
         description: "How long to keep the bot running (minutes)"
-        default: "70"
+        default: "90"
 
 concurrency:
   group: bot          # never two copies at once (Telegram allows only one)
@@ -62,7 +63,7 @@ jobs:
           fi
 
       - name: Run the bot
-        run: python run.py window "${{ inputs.minutes || '70' }}"
+        run: python run.py window "${{ inputs.minutes || '90' }}"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
