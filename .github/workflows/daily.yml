@@ -12,12 +12,9 @@ name: daily bot window
 
 on:
   schedule:
-    # GitHub schedules in UTC, but local time shifts with daylight saving. So
-    # there are two triggers, one per UTC offset, and the "gate" job below
-    # lets through only the one that lands at START_LOCAL in LOCAL_TZ.
-    # For 08:20 in Israel: 05:20 UTC in summer (UTC+3), 06:20 UTC in winter (UTC+2).
-    - cron: "20 5 * * *"
-    - cron: "20 6 * * *"
+    # Times are UTC. 06:00 UTC = 08:00 in Israel in winter (UTC+2), 09:00 in summer (UTC+3).
+    # GitHub may start scheduled runs 5-30 minutes late.
+    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       minutes:
@@ -25,34 +22,10 @@ on:
         default: "90"
 
 env:
-  LOCAL_TZ: Asia/Jerusalem   # your time zone
-  START_LOCAL: "08:20"       # when the daily window should open, local time
-  WINDOW_MINUTES: "90"       # how long it stays open (08:20 -> 09:50)
+  WINDOW_MINUTES: "90"       # how long the bot stays on each day
 
 jobs:
-  gate:
-    runs-on: ubuntu-latest
-    outputs:
-      go: ${{ steps.check.outputs.go }}
-    steps:
-      - id: check
-        run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          # Without time-zone data, `date` silently falls back to UTC; fail loudly instead.
-          if [ ! -f "/usr/share/zoneinfo/$LOCAL_TZ" ]; then echo "::error::Unknown time zone $LOCAL_TZ"; exit 1; fi
-          now=$(TZ="$LOCAL_TZ" date +%H:%M)
-          mins=$((10#${now%:*} * 60 + 10#${now#*:}))
-          start=$((10#${START_LOCAL%:*} * 60 + 10#${START_LOCAL#*:}))
-          # GitHub may start scheduled runs late, so accept up to 50 minutes after START_LOCAL.
-          if [ "$mins" -ge $((start - 15)) ] && [ "$mins" -lt $((start + 50)) ]; then
-            echo "go=true" >> "$GITHUB_OUTPUT"; echo "It's $now in $LOCAL_TZ: opening the window."
-          else
-            echo "go=false" >> "$GITHUB_OUTPUT"; echo "It's $now in $LOCAL_TZ, not around $START_LOCAL: the other daily trigger handles today."
-          fi
-
   run:
-    needs: gate
-    if: needs.gate.outputs.go == 'true'
     concurrency:
       group: bot          # never two copies at once (Telegram allows only one)
       cancel-in-progress: false

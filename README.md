@@ -109,8 +109,7 @@ The settings page is at http://127.0.0.1:8000.
 If you only need the morning message plus a little chatting, GitHub can run
 the bot **for free** once a day (Actions minutes are free on public repos). The
 workflow `.github/workflows/daily.yml`:
-- starts the bot every morning at your chosen local time and keeps it running
-  for 90 minutes (adjustable);
+- starts the bot every morning and keeps it running for 90 minutes (adjustable);
 - sends the morning message at your send time if it falls inside that window,
   otherwise right away, and always before the window closes;
 - answers your Telegram messages, including ones sent while it was off
@@ -129,12 +128,11 @@ workflow `.github/workflows/daily.yml`:
    - Optional: `TELEGRAM_ALLOWED_USER_IDS` (your Telegram user id), and
      `NBA_AGENT_SEED_SETTINGS` (the output of `python run.py export`) to start
      with your current settings.
-3. At the top of `daily.yml`, set `LOCAL_TZ` (e.g. `Europe/London`),
-   `START_LOCAL` (when the window opens, e.g. `08:20`) and `WINDOW_MINUTES`.
-   Then set the two `cron:` lines to that start time **in UTC**, one for each of
-   your UTC offsets (summer and winter). GitHub only schedules in UTC, so a
-   small "gate" step lets through only the run that lands at your local start
-   time. If your country doesn't change clocks, one cron line is enough.
+3. Edit the `cron:` line in `daily.yml` to when the window should open, **in UTC**.
+   For example, `0 6 * * *` is 06:00 UTC: 08:00 in UTC+2, 09:00 in UTC+3. Set
+   `WINDOW_MINUTES` for how long it stays on. Make sure your morning-message
+   send time falls inside the window; if it's earlier, the message goes out as
+   soon as the window opens.
 4. Go to **Actions → daily bot window → Run workflow** to try it right away. The
    *minutes* box sets how long it stays up.
 
