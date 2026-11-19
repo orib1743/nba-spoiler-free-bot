@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NBA Agent</title>
+<style>
+  :root {
+    --bg: #f4f2ee; --card: #ffffff; --ink: #1b1d22; --muted: #6b6f78; --line: #e3e0da;
+    --accent: #e8590c; --accent-soft: #fff0e6; --ok: #2b8a3e; --warn: #b35c00; --bubble: #dcf8c6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14161a; --card: #1d2026; --ink: #eceef2; --muted: #9aa0ab; --line: #2e323a;
+            --accent: #ff7a2e; --accent-soft: #3a2416; --bubble: #1f4d36; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 28px 16px 8px; max-width: 980px; margin: 0 auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
+  header .tag { color: var(--muted); }
+  .pill { margin-left: auto; padding: 4px 12px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--line); color: var(--muted); }
+  .pill.on { background: #d3f9d8; color: var(--ok); }
+  main { max-width: 980px; margin: 0 auto; padding: 8px 16px 120px; display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-width: 0; }
+  .wide { grid-column: 1 / -1; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  h2 { margin: 0 0 4px; font-size: 17px; }
+  .sub { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; }
+  label.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  label.row:first-of-type { border-top: 0; }
+  input[type=text], input[type=tel], input[type=time], input[type=number], input[type=date], select {
+    font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; max-width: 100%; }
+  input[type=number] { width: 72px; }
+  button { font: inherit; cursor: pointer; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 8px 14px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  .switch { position: relative; width: 42px; height: 24px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 99px; transition: .15s; }
+  .switch span::after { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(18px); }
+  .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; }
+  .team { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--bg); text-align: left; font-size: 13px; }
+  .team img { width: 26px; height: 26px; object-fit: contain; }
+  .team.on { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .rule { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+  .rule .head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; }
+  .rule .body { color: var(--muted); margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .rule.off .body { opacity: .45; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 99px; background: var(--accent-soft); font-size: 13.5px; }
+  .chip button { border: 0; background: transparent; padding: 0 6px; font-size: 16px; color: var(--muted); }
+  .addplayer { display: flex; gap: 8px; flex-wrap: wrap; }
+  .addplayer select { flex: 1 1 160px; }
+  .radios { display: grid; gap: 6px; margin-top: 8px; }
+  .radios label { display: flex; gap: 8px; align-items: flex-start; }
+  .warn { color: var(--warn); font-size: 12.5px; }
+  .phone { background: #0b141a; border-radius: 14px; padding: 16px; min-height: 120px; }
+  @media (prefers-color-scheme: light) { .phone { background: #e9e2d8; } }
+  .bubble { background: var(--bubble); color: var(--ink); white-space: pre-wrap; border-radius: 10px 10px 10px 2px; padding: 10px 12px; max-width: 520px; font-size: 14.5px; box-shadow: 0 1px 1px rgba(0,0,0,.15); }
+  .previewbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .hist { font-size: 13px; color: var(--muted); }
+  .hist div { padding: 6px 0; border-top: 1px solid var(--line); }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--card) 92%, transparent);
+         backdrop-filter: blur(6px); border-top: 1px solid var(--line); padding: 12px 16px; }
+  .bar .in { max-width: 980px; margin: 0 auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #msg { color: var(--muted); font-size: 13.5px; margin-right: auto; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  a { color: var(--accent); }
+  .chatlog { display: flex; flex-direction: column; gap: 8px; max-height: 420px; min-height: 120px; overflow-y: auto;
+             padding: 12px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+  .msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+  .msg.agent { align-self: flex-start; background: var(--card); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+  .msg.sys { align-self: center; color: var(--muted); font-size: 13px; background: transparent; text-align: center; }
+  .chatform { display: flex; gap: 8px; margin-top: 10px; }
+  .chatform input { flex: 1; min-width: 0; padding: 10px 12px; }
+  .chip.suggest { cursor: pointer; padding: 5px 12px; border: 0; color: var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏀 NBA Agent</h1>
+  <span class="tag">Morning picks on WhatsApp, with no spoilers</span>
+  <span id="status" class="pill">Paused</span>
+</header>
+
+<main>
+  <section class="card wide">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">💬 Chat with your agent</h2>
+      <button id="newchat" class="small" style="margin-left:auto">New chat</button>
+    </div>
+    <p class="sub" style="margin-top:4px">Ask about games (it won't spoil anything unless you ask), or tell it to change your settings.</p>
+    <div id="chatlog" class="chatlog"></div>
+    <div id="suggest" class="chips"></div>
+    <form id="chatform" class="chatform">
+      <input type="text" id="chatinput" placeholder="e.g. Which games from last night are worth watching?" autocomplete="off">
+      <button class="primary" id="chatsend">Send</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Delivery</h2>
+    <p class="sub">When and where your morning message arrives.</p>
+    <label class="row">Send me the daily message
+      <span class="switch"><input type="checkbox" id="enabled"><span></span></span></label>
+    <label class="row">WhatsApp number <input type="tel" id="phone" placeholder="+15551234567"></label>
+    <label class="row">Time zone <select id="timezone"></select></label>
+    <label class="row">Send at <input type="time" id="send_time"></label>
+    <label class="row">If late games are still on, wait up to
+      <span><input type="number" id="wait_for_final_hours" min="0" max="12" step="0.5"> h</span></label>
+    <div class="radios" id="sender">
+      <label><input type="radio" name="sender" value="console"> <span><b>Dry run</b>: print the message in the terminal</span></label>
+      <label><input type="radio" name="sender" value="telegram"> <span><b>Telegram</b>: free, chat with the agent too</span></label>
+      <label><input type="radio" name="sender" value="callmebot"> <span><b>CallMeBot</b>: free, for your own number only</span></label>
+      <label><input type="radio" name="sender" value="meta"> <span><b>WhatsApp Cloud API</b>: official, needed to publish</span></label>
+    </div>
+    <div id="cmb" class="note">CallMeBot API key <input type="text" id="callmebot_apikey" placeholder="123456">
+      <div>Get one: <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">callmebot.com</a></div></div>
+    <div id="metanote" class="note">Uses server environment variables (see README).</div>
+    <div id="tgnote" class="note"></div>
+    <div class="note" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px">
+      Backup / move to another server:
+      <button type="button" class="small" id="exportbtn">Export settings</button>
+      <button type="button" class="small" id="importbtn">Import settings</button>
+      <input type="file" id="importfile" accept="application/json,.json" hidden>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Recommendation rules</h2>
+    <p class="sub">A game is recommended if <b>any</b> rule matches.</p>
+    <div class="rule" id="r_matchup">
+      <div class="head">⭐ Two of my teams, not a blowout
+        <span class="switch"><input type="checkbox" id="matchup_enabled"><span></span></span></div>
+      <div class="body">Both teams are in my list, and the margin entering the 4th quarter was under
+        <input type="number" id="max_margin_entering_q4" min="1" max="60"> points.</div>
+    </div>
+    <div id="closerules"></div>
+    <button id="addclose" class="small" type="button" style="margin-top:8px">+ Add close-finish rule</button>
+    <label class="row" style="margin-top:10px">Say <i>why</i> each game is recommended
+      <span class="switch"><input type="checkbox" id="show_reasons"><span></span></span></label>
+    <div class="warn" id="reasonwarn">Labels like "close finish" give away a bit about how the game went.</div>
+  </section>
+
+  <section class="card wide">
+    <h2>My teams <span id="teamcount" class="sub"></span></h2>
+    <p class="sub">Used by the "two of my teams" rule (and by the close-finish rule if limited to my teams).</p>
+    <div class="teams" id="teams"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>My players</h2>
+    <p class="sub">After each game night you'll hear whether they played.</p>
+    <div class="addplayer">
+      <select id="p_team"><option value="">Choose a team…</option></select>
+      <select id="p_player" disabled><option>Player…</option></select>
+      <button id="p_add" class="small">Add</button>
+    </div>
+    <div class="chips" id="players"></div>
+    <div class="radios" id="detail">
+      <label><input type="radio" name="detail" value="played_only"> <span><b>Played / didn't play</b>: safest</span></label>
+      <label><input type="radio" name="detail" value="minutes"> <span><b>+ minutes and DNP reason</b> <span class="warn">small spoiler risk (low minutes can mean a blowout)</span></span></label>
+      <label><input type="radio" name="detail" value="stats"> <span><b>+ points, rebounds, assists</b> <span class="warn">spoilers</span></span></label>
+    </div>
+  </section>
+
+  <section class="card wide">
+    <h2>Preview</h2>
+    <p class="sub">See what the message would say for any night, using the settings on this page (even unsaved ones).</p>
+    <div class="previewbar">
+      <input type="date" id="night">
+      <button id="previewbtn">Preview</button>
+    </div>
+    <div class="phone"><div class="bubble" id="bubble">Press Preview.</div></div>
+    <h2 style="margin-top:18px">Recent messages</h2>
+    <div class="hist" id="history"></div>
+  </section>
+</main>
+
+<div class="bar"><div class="in">
+  <span id="msg"></span>
+  <button id="testbtn">Send test now</button>
+  <button id="savebtn" class="primary">Save</button>
+</div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let S = null, TEAMS = [];
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail ? (typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail)) : r.statusText);
+  return body;
+}
+function say(text, ok = true) { $("msg").textContent = text; $("msg").style.color = ok ? "" : "var(--warn)"; }
+
+function collect() {
+  return {
+    ...S,
+    enabled: $("enabled").checked,
+    phone: $("phone").value.trim(),
+    timezone: $("timezone").value,
+    send_time: $("send_time").value || "08:00",
+    wait_for_final_hours: +$("wait_for_final_hours").value,
+    matchup_rule: { enabled: $("matchup_enabled").checked, max_margin_entering_q4: +$("max_margin_entering_q4").value },
+    close_rules: [...document.querySelectorAll("#closerules .rule")].map(r => ({
+      enabled: r.querySelector(".c_on").checked, minutes_left: +r.querySelector(".c_min").value,
+      max_margin: +r.querySelector(".c_margin").value, scope: r.querySelector(".c_scope").value })),
+    show_reasons: $("show_reasons").checked,
+    player_detail: document.querySelector("input[name=detail]:checked").value,
+    sender: { type: document.querySelector("input[name=sender]:checked").value,
+              callmebot_apikey: $("callmebot_apikey").value.trim() },
+  };
+}
+
+function paint() {
+  $("enabled").checked = S.enabled;
+  $("phone").value = S.phone;
+  $("timezone").value = S.timezone;
+  $("send_time").value = S.send_time;
+  $("wait_for_final_hours").value = S.wait_for_final_hours;
+  $("matchup_enabled").checked = S.matchup_rule.enabled;
+  $("max_margin_entering_q4").value = S.matchup_rule.max_margin_entering_q4;
+  renderCloseRules();
+  $("show_reasons").checked = S.show_reasons;
+  document.querySelector(`input[name=detail][value=${S.player_detail}]`).checked = true;
+  document.querySelector(`input[name=sender][value=${S.sender.type}]`).checked = true;
+  $("callmebot_apikey").value = S.sender.callmebot_apikey;
+  refresh();
+}
+
+function refresh() {
+  $("status").textContent = $("enabled").checked ? `On · ${$("send_time").value}` : "Paused";
+  $("status").classList.toggle("on", $("enabled").checked);
+  $("r_matchup").classList.toggle("off", !$("matchup_enabled").checked);
+  document.querySelectorAll("#closerules .rule").forEach(r => r.classList.toggle("off", !r.querySelector(".c_on").checked));
+  $("reasonwarn").style.display = $("show_reasons").checked ? "" : "none";
+  const sender = document.querySelector("input[name=sender]:checked")?.value;
+  $("cmb").style.display = sender === "callmebot" ? "" : "none";
+  $("metanote").style.display = sender === "meta" ? "" : "none";
+  $("tgnote").style.display = sender === "telegram" ? "" : "none";
+  $("tgnote").textContent = S.telegram_chat_id ? "✓ Connected to your Telegram chat."
+    : "Not connected yet: send your bot any message on Telegram (see README).";
+  renderTeams(); renderPlayers();
+}
+
+function renderCloseRules() {
+  $("closerules").replaceChildren(...S.close_rules.map((c, i) => {
+    const d = document.createElement("div");
+    d.className = "rule" + (c.enabled ? "" : " off");
+    d.innerHTML = `
+      <div class="head">🔥 Close finish${S.close_rules.length > 1 ? " #" + (i + 1) : ""}
+        <span style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="small c_del" title="Remove this rule">Remove</button>
+          <span class="switch"><input type="checkbox" class="c_on"><span></span></span></span></div>
+      <div class="body">At any point in the last <input type="number" class="c_min" min="1" max="12" step="0.5"> minutes
+        (or in overtime), the game was within <input type="number" class="c_margin" min="0" max="30"> points.
+        <select class="c_scope"><option value="all">Any game</option><option value="favorites">Only games with one of my teams</option></select>
+      </div>`;
+    d.querySelector(".c_on").checked = c.enabled;
+    d.querySelector(".c_min").value = c.minutes_left;
+    d.querySelector(".c_margin").value = c.max_margin;
+    d.querySelector(".c_scope").value = c.scope;
+    d.querySelector(".c_del").onclick = () => { S = collect(); S.close_rules.splice(i, 1); renderCloseRules(); };
+    return d;
+  }));
+}
+$("addclose").onclick = () => {
+  S = collect();
+  S.close_rules.push({ enabled: true, minutes_left: 2, max_margin: 3, scope: "all" });
+  renderCloseRules();
+};
+
+function renderTeams() {
+  const favs = new Set(S.favorite_teams);
+  $("teamcount").textContent = favs.size ? `· ${favs.size} selected` : "";
+  $("teams").replaceChildren(...TEAMS.map(t => {
+    const b = document.createElement("button");
+    b.className = "team" + (favs.has(t.id) ? " on" : "");
+    b.innerHTML = `<img alt="" src="${t.logo}"><span>${t.short}</span>`;
+    b.title = t.name;
+    b.onclick = () => {
+      S.favorite_teams = favs.has(t.id) ? S.favorite_teams.filter(x => x !== t.id) : [...S.favorite_teams, t.id];
+      renderTeams();
+    };
+    return b;
+  }));
+}
+
+function renderPlayers() {
+  const abbr = Object.fromEntries(TEAMS.map(t => [t.id, t.abbr]));
+  $("players").replaceChildren(...S.players.map(p => {
+    const c = document.createElement("span");
+    c.className = "chip";
+    c.textContent = `${p.name}${abbr[p.team_id] ? " · " + abbr[p.team_id] : ""}`;
+    const x = document.createElement("button");
+    x.textContent = "×"; x.title = "Remove";
+    x.onclick = () => { S.players = S.players.filter(q => q.id !== p.id); renderPlayers(); };
+    c.append(x);
+    return c;
+  }));
+}
+
+async function loadRoster() {
+  const id = $("p_team").value;
+  $("p_player").disabled = !id;
+  if (!id) return;
+  $("p_player").innerHTML = "<option>Loading…</option>";
+  const players = await api(`/api/teams/${id}/roster`);
+  $("p_player").innerHTML = players.map(p => `<option value="${p.id}">${p.name}${p.pos ? " (" + p.pos + ")" : ""}</option>`).join("");
+}
+
+async function loadHistory() {
+  const h = await api("/api/history");
+  $("history").replaceChildren(...(h.length ? h : [null]).map(e => {
+    const d = document.createElement("div");
+    d.textContent = e ? `${e.sent_at.replace("T", " ").slice(0, 16)} UTC · ${e.kind} · night of ${e.night} · ${e.ok ? "✓ sent" : "✗ " + e.error}` : "Nothing sent yet.";
+    return d;
+  }));
+}
+
+async function init() {
+  const tzs = Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : ["UTC"];
+  $("timezone").innerHTML = ["UTC", ...tzs].map(z => `<option>${z}</option>`).join("");
+  const [{ settings, default_night }, teams] = await Promise.all([api("/api/settings"), api("/api/teams")]);
+  S = settings; TEAMS = teams;
+  if (S.timezone === "UTC") S.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  $("night").value = default_night;
+  $("p_team").innerHTML += TEAMS.map(t => `<option value="${t.id}">${t.name}</option>`).join("");
+  paint();
+  loadHistory();
+}
+
+document.addEventListener("change", (e) => { if (e.target.closest("main, header")) { S = collect(); refresh(); } });
+$("p_team").onchange = loadRoster;
+$("p_add").onclick = () => {
+  const sel = $("p_player"); if (sel.disabled || !sel.value) return;
+  const id = sel.value, name = sel.selectedOptions[0].textContent.replace(/ \(.*\)$/, "");
+  if (!S.players.some(p => p.id === id)) S.players.push({ id, name, team_id: $("p_team").value });
+  renderPlayers();
+};
+$("savebtn").onclick = async () => {
+  try { S = collect(); await api("/api/settings", { method: "PUT", body: JSON.stringify(S) }); say("Saved ✓"); }
+  catch (e) { say("Couldn't save: " + e.message, false); }
+};
+$("previewbtn").onclick = async () => {
+  $("bubble").textContent = "Checking last night's games…";
+  try {
+    const r = await api("/api/preview", { method: "POST", body: JSON.stringify({ settings: collect(), night: $("night").value || null }) });
+    $("bubble").textContent = r.text;
+  } catch (e) { $("bubble").textContent = "Error: " + e.message; }
+};
+$("testbtn").onclick = async () => {
+  say("Sending… (uses saved settings)");
+  try { const r = await api("/api/send-test", { method: "POST" }); say("✓ " + r.info); }
+  catch (e) { say("✗ " + e.message, false); }
+  loadHistory();
+};
+// ---------- backup ----------
+$("exportbtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(collect(), null, 2)], { type: "application/json" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "nba-agent-settings.json" });
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$("importbtn").onclick = () => $("importfile").click();
+$("importfile").onchange = async () => {
+  const f = $("importfile").files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    await api("/api/settings", { method: "PUT", body: JSON.stringify(data) });
+    S = (await api("/api/settings")).settings; paint(); say("Settings imported ✓");
+  } catch (e) { say("Import failed: " + e.message, false); }
+  $("importfile").value = "";
+};
+
+// ---------- chat ----------
+const SUGGESTIONS = ["Which games from last night are worth watching?", "When do my teams play next?",
+                     "Add Nikola Jokic to my players", "Send my message at 07:30 instead"];
+
+function bubble(role, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + role;
+  d.textContent = text;
+  $("chatlog").append(d);
+  $("chatlog").scrollTop = $("chatlog").scrollHeight;
+  return d;
+}
+
+async function loadChat() {
+  const { messages, configured } = await api("/api/chat");
+  $("chatlog").replaceChildren();
+  if (!configured) bubble("sys", "Chat needs an Anthropic API key: add ANTHROPIC_API_KEY to the .env file and restart (see README).");
+  else if (!messages.length) bubble("sys", "Say hi 👋");
+  messages.forEach(m => bubble(m.role, m.text));
+  $("suggest").replaceChildren(...(messages.length ? [] : SUGGESTIONS.map(s => {
+    const b = document.createElement("button");
+    b.className = "chip suggest"; b.type = "button"; b.textContent = s;
+    b.onclick = () => { $("chatinput").value = s; $("chatform").requestSubmit(); };
+    return b;
+  })));
+}
+
+$("chatform").onsubmit = async (e) => {
+  e.preventDefault();
+  const text = $("chatinput").value.trim();
+  if (!text) return;
+  $("chatinput").value = ""; $("suggest").replaceChildren();
+  $("chatlog").querySelector(".msg.sys")?.remove();
+  bubble("user", text);
+  const wait = bubble("sys", "…thinking");
+  $("chatsend").disabled = true;
+  try {
+    const r = await api("/api/chat", { method: "POST", body: JSON.stringify({ text }) });
+    wait.remove(); bubble("agent", r.reply);
+    if (r.settings_changed) {
+      S = (await api("/api/settings")).settings; paint(); say("Settings updated by the agent ✓");
+    }
+  } catch (err) { wait.textContent = "⚠ " + err.message; }
+  $("chatsend").disabled = false; $("chatinput").focus();
+};
+$("newchat").onclick = async () => { await api("/api/chat/new", { method: "POST" }); loadChat(); };
+
+init().then(loadChat).catch(e => say("Failed to load: " + e.message, false));
+</script>
+</body>
+</html>

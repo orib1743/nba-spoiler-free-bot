@@ -1,0 +1,12 @@
+# Secrets and personal data: never commit these
+.env
+data/
+*.db
+
+# Local tooling
+.venv/
+.idea/
+.vscode/
+__pycache__/
+.pytest_cache/
+*.pyc
