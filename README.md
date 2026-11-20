@@ -129,7 +129,9 @@ workflow `.github/workflows/daily.yml`:
      `NBA_AGENT_SEED_SETTINGS` (the output of `python run.py export`) to start
      with your current settings.
 3. Edit the `cron:` line in `daily.yml` to when the window should open, **in UTC**.
-   For example, `0 6 * * *` is 06:00 UTC: 08:00 in UTC+2, 09:00 in UTC+3. Set
+   For example, `53 5 * * *` is 05:53 UTC: 07:53 in UTC+2, 08:53 in UTC+3.
+   Avoid minute `0`: GitHub is busiest at the top of the hour and delays
+   scheduled runs most then. Set
    `WINDOW_MINUTES` for how long it stays on. Make sure your morning-message
    send time falls inside the window; if it's earlier, the message goes out as
    soon as the window opens.
@@ -137,7 +139,10 @@ workflow `.github/workflows/daily.yml`:
    *minutes* box sets how long it stays up.
 
 **Good to know**
-- GitHub may start scheduled runs 5–30 minutes late.
+- GitHub doesn't guarantee start times. Scheduled runs are usually a few
+  minutes late, but on busy days they can be hours late or skipped. For an
+  exact time, have an outside scheduler (e.g. cron-job.org) start the workflow
+  through GitHub's API, or use an always-on host.
 - GitHub pauses scheduled workflows in repos with no activity for 60 days;
   re-enable them on the Actions tab.
 - Run only one copy of the bot at a time. Stop the one on your computer while

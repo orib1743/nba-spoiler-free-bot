@@ -12,9 +12,10 @@ name: daily bot window
 
 on:
   schedule:
-    # Times are UTC. 06:00 UTC = 08:00 in Israel in winter (UTC+2), 09:00 in summer (UTC+3).
-    # GitHub may start scheduled runs 5-30 minutes late.
-    - cron: "0 6 * * *"
+    # Times are UTC. 05:53 UTC = 07:53 in Israel in winter (UTC+2), 08:53 in summer (UTC+3).
+    # Not on the hour: GitHub is busiest at :00 and delays (or drops) scheduled
+    # runs most then. Even so, start times are best effort, not guaranteed.
+    - cron: "53 5 * * *"
   workflow_dispatch:
     inputs:
       minutes:
